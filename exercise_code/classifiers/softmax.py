@@ -35,14 +35,36 @@ def cross_entropy_loss_naive(W, X, y, reg):
     # the regularization!                                                      #
     ############################################################################
 
-    pass
+    y_hats = X @ W # NxC
+    n_samples, n_classes = y_hats.shape
+    for i in range(n_samples):
+        actual_class_idx = y[i]
+        all_class_scores = y_hats[i] # for the ith sample
+        actual_class_score = all_class_scores[actual_class_idx]
 
+        # Method-1: Use epsilon
+        # eps = -np.max(all_class_scores)
+        # nom = np.exp(actual_class_score + eps)
+        # denom = 0.0
+        # for j in range(n_classes):
+        #     denom += np.exp(all_class_scores[j] + eps)
+        # loss += -np.log(nom / denom)
+
+        # Method-2: Distribute log to expression
+        loss += -actual_class_score 
+        # Calculate log of sum of exp of y_hat entries
+        exp_sum = 0.0
+        for j in range(n_classes):
+            exp_sum += np.exp(all_class_scores[j])
+        loss += np.log(exp_sum)
+
+    loss = loss / n_samples + reg # Calculate the mean, add regularization term
+    
     ############################################################################
     #                          END OF YOUR CODE                                #
     ############################################################################
 
     return loss, dW
-
 
 def cross_entropy_loss_vectorized(W, X, y, reg):
     """
@@ -61,7 +83,10 @@ def cross_entropy_loss_vectorized(W, X, y, reg):
     # the regularization!                                                      #
     ############################################################################
 
-    pass
+    y_hats = X @ W # NxC
+    actual_class_scores = np.choose(y, y_hats.T)        # Pick actual class scores for every sample: y_hats.T -> (CxN): Chooses the entry from each column vector wrt corresponding y entry
+    sigma = np.log(np.sum(np.exp(y_hats), axis=1))      # Calculate log of sum of exp of y_hat entries
+    loss = np.mean(-actual_class_scores + sigma) + reg  # Calculate the mean, add regularization term
 
     ############################################################################
     #                          END OF YOUR CODE                                #
