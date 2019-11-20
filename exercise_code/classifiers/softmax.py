@@ -4,6 +4,26 @@ import numpy as np
 
 from .linear_classifier import LinearClassifier
 
+def naive_matrix_mult(x, y):
+    I, K, J = *x.shape, y.shape[1]
+    result = np.zeros((I, J))
+    for i in range(I):
+        for j in range(J):
+            for k in range(K):
+                result[i][j] += x[i][k] * y[k][j]
+    return result
+
+def naive_matrix_sum(x, y):
+    n_row, n_col = x.shape
+    for i in range(n_row):
+        for j in range(n_col):
+            x[i][j] += y[i][j]
+
+def naive_matrix_scale(x, scalar):
+    n_row, n_col = x.shape
+    for i in range(n_row):
+        for j in range(n_col):
+            x[i][j] *= scalar
 
 def cross_entropy_loss_naive(W, X, y, reg):
     """
@@ -29,37 +49,43 @@ def cross_entropy_loss_naive(W, X, y, reg):
     dW = np.zeros_like(W)
 
     ############################################################################
-    # TODO: Compute the cross-entropy loss and its gradient using explicit     #
+    # DONE: Compute the cross-entropy loss and its gradient using explicit     #
     # loops. Store the loss in loss and the gradient in dW. If you are not     #
     # careful here, it is easy to run into numeric instability. Don't forget   #
     # the regularization!                                                      #
     ############################################################################
 
-    y_hats = X @ W # NxC
-    n_samples, n_classes = y_hats.shape
+    # Matrix multiplication: Naive implementation
+    n_samples = X.shape[0]
+    n_classes = W.shape[1]
+    y_hats = naive_matrix_mult(X, W)
+    p_vals = np.zeros((1, n_classes)) # Store softmax outputs
+
+    # Loss & gradient calculations
     for i in range(n_samples):
-        actual_class_idx = y[i]
+        actual_class_idx = y[i]      # for the ith sample
         all_class_scores = y_hats[i] # for the ith sample
-        actual_class_score = all_class_scores[actual_class_idx]
 
-        # Method-1: Use epsilon
-        # eps = -np.max(all_class_scores)
-        # nom = np.exp(actual_class_score + eps)
-        # denom = 0.0
-        # for j in range(n_classes):
-        #     denom += np.exp(all_class_scores[j] + eps)
-        # loss += -np.log(nom / denom)
-
-        # Method-2: Distribute log to expression
-        loss += -actual_class_score 
-        # Calculate log of sum of exp of y_hat entries
-        exp_sum = 0.0
+        # Use epsilon to handle numerical instability in softmax
+        eps = -np.max(all_class_scores)
+        
+        # Calculate denominator of softmax
+        denom = 0.0
         for j in range(n_classes):
-            exp_sum += np.exp(all_class_scores[j])
-        loss += np.log(exp_sum)
+            denom += np.exp(all_class_scores[j] + eps)
+        
+        # Calculate nominator of softmax
+        for j in range(n_classes):
+            nom = np.exp(all_class_scores[j] + eps)
+            p_vals[0, j] = nom / denom
+        
+        loss += -np.log(p_vals[0, actual_class_idx]) # Cross-entropy loss for ith sample
+        p_vals[0, actual_class_idx] -= 1             # Subtract one from the predicted score of actual class
+        dW_i = naive_matrix_mult(X[i].reshape(-1, 1), p_vals) # Calculate jacobian for ith sample
+        naive_matrix_sum(dW, dW_i)                            # Add contribution of current sample to the overall gradient
 
-    loss = loss / n_samples + reg # Calculate the mean, add regularization term
-    
+    loss = loss / n_samples + reg         # Calculate the mean of losses, add regularization term
+    naive_matrix_scale(dW, 1.0/n_samples) # Calculate the mean of jacobians
     ############################################################################
     #                          END OF YOUR CODE                                #
     ############################################################################
