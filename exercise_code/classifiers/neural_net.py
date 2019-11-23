@@ -189,11 +189,13 @@ class TwoLayerNet(object):
             y_batch = None
 
             ####################################################################
-            # TODO: Create a random minibatch of training data and labels,     #
+            # DONE: Create a random minibatch of training data and labels,     #
             # storing hem in X_batch and y_batch respectively.                 #
             ####################################################################
 
-            pass
+            idxs = np.random.choice(num_train, batch_size)
+            X_batch = X[idxs]
+            y_batch = y[idxs]
 
             ####################################################################
             #                             END OF YOUR CODE                     #
@@ -204,13 +206,14 @@ class TwoLayerNet(object):
             loss_history.append(loss)
 
             ####################################################################
-            # TODO: Use the gradients in the grads dictionary to update the    #
+            # DONE: Use the gradients in the grads dictionary to update the    #
             # parameters of the network (stored in the dictionary self.params) #
             # using stochastic gradient descent. You'll need to use the        #
             # gradients stored in the grads dictionary defined above.          #
             ####################################################################
 
-            pass
+            for key in self.params:
+              self.params[key] -= learning_rate * grads[key]
 
             ####################################################################
             #                             END OF YOUR CODE                     #
@@ -254,10 +257,13 @@ class TwoLayerNet(object):
         y_pred = None
 
         ########################################################################
-        # TODO: Implement this function; it should be VERY simple!             #
+        # DONE: Implement this function; it should be VERY simple!             #
         ########################################################################
 
-        pass
+        O = X @ self.params['W1'] + self.params['b1']
+        H = np.maximum(0, O)
+        scores = H @ self.params['W2'] + self.params['b2']
+        y_pred = np.argmax(scores, axis=1)
 
         ########################################################################
         #                              END OF YOUR CODE                        #
@@ -270,7 +276,7 @@ def neuralnetwork_hyperparameter_tuning(X_train, y_train, X_val, y_val):
     best_net = None # store the best model into this 
 
     ############################################################################
-    # TODO: Tune hyperparameters using the validation set. Store your best     #
+    # DONE: Tune hyperparameters using the validation set. Store your best     #
     # trained model in best_net.                                               #
     #                                                                          #
     # To help debug your network, it may help to use visualizations similar to #
@@ -283,7 +289,51 @@ def neuralnetwork_hyperparameter_tuning(X_train, y_train, X_val, y_val):
     # automatically like we did on the previous exercises.                     #
     ############################################################################
 
-    pass
+    results = {}
+    best_val = -1
+    all_nets = []
+
+    learning_rates = [1e-3]
+    regularization_strengths = [1e-1, 1.5e-1]
+    hidden_sizes = [150, 180, 200]
+    num_iters = 2000
+
+    input_size = X_train.shape[1]
+    num_classes = y_train.shape[0]
+
+    for lr in learning_rates:
+      for reg in regularization_strengths:
+        for hidden_size in hidden_sizes:
+          net = TwoLayerNet(input_size, hidden_size, num_classes)
+          net.train(X_train, y_train, X_val, y_val, learning_rate=lr, reg=reg,
+                    num_iters=num_iters, verbose=False)
+
+          y_train_pred = net.predict(X_train)
+          train_acc = np.mean(y_train == y_train_pred)
+
+          y_val_pred = net.predict(X_val)
+          val_acc = np.mean(y_val == y_val_pred)
+
+          print('lr %e' % lr)
+          print('reg %e' % reg)
+          print('hs %d' % hidden_size)
+          print('training accuracy: %f' % train_acc)
+          print('validation accuracy: %f' % val_acc)
+          
+          results[(lr, reg, hidden_size)] = (train_acc, val_acc)
+          all_nets.append((net, val_acc))
+          
+          if val_acc > best_val:
+              best_val = val_acc
+              best_net = net
+
+      # Print out results.
+      for (lr, reg, hidden_size) in sorted(results):
+          train_accuracy, val_accuracy = results[(lr, reg)]
+          print('lr %e reg %e hs %d train accuracy: %f val accuracy: %f' % (
+                lr, reg, hidden_size, train_accuracy, val_accuracy))
+        
+    print('best validation accuracy achieved during validation: %f' % best_val)
 
     ############################################################################
     #                               END OF YOUR CODE                           #
