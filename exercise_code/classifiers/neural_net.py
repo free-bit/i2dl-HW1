@@ -74,12 +74,14 @@ class TwoLayerNet(object):
         # Compute the forward pass
         scores = None
         ########################################################################
-        # TODO: Perform the forward pass, computing the class scores for the   #
+        # DONE: Perform the forward pass, computing the class scores for the   #
         # input. Store the result in the scores variable, which should be an   #
         # array of shape (N, C).                                               #         
         ########################################################################
 
-        pass
+        O = X @ W1 + b1      # First fully connected layer output -> O: NxH
+        H = np.maximum(0, O) # ReLU -> H: NxH
+        scores = H @ W2 + b2 # Second fully connected layer output -> scores: NxC
 
         ########################################################################
         #                              END OF YOUR CODE                        #
@@ -92,14 +94,24 @@ class TwoLayerNet(object):
         # Compute the loss
         loss = None
         ########################################################################
-        # TODO: Finish the forward pass, and compute the loss. This should     #
+        # DONE: Finish the forward pass, and compute the loss. This should     #
         # include both the data loss and L2 regularization for W1 and W2. Store#
         # the result in the variable loss, which should be a scalar. Use the   #
         # Softmax classifier loss. So that your results match ours, multiply   #
         # the regularization loss by 0.5                                       #
         ########################################################################
 
-        pass
+        row_idxs = np.arange(N)
+        
+        # Softmax calculation
+        eps = (-np.max(scores, axis=1, keepdims=True))
+        nom = np.exp(scores + eps)
+        denom = np.sum(nom, axis=1, keepdims=True)
+        softmax_scores = nom / denom
+        
+        # Cross entropy loss with regularization term calculation
+        actual_class_scores = softmax_scores[row_idxs, y]
+        loss = -np.mean(np.log(actual_class_scores)) + (np.sum(W1**2) + np.sum(W2**2)) * (reg/2)
 
         ########################################################################
         #                              END OF YOUR CODE                        #
@@ -108,13 +120,33 @@ class TwoLayerNet(object):
         # Backward pass: compute gradients
         grads = {}
         ########################################################################
-        # TODO: Compute the backward pass, computing the derivatives of the    #
+        # DONE: Compute the backward pass, computing the derivatives of the    #
         # weights and biases. Store the results in the grads dictionary. For   #
         # example, grads['W1'] should store the gradient on W1, and be a matrix#
         # of same size                                                         #
         ########################################################################
 
-        pass
+        # dL/dsoftmax * dsoftmax/dscores
+        softmax_scores[row_idxs, y] -= 1
+        dL_dscores = softmax_scores / N           # NxC (Renaming the term for a better understanding)
+
+        # dL/dscores * dscores/dW2 -> Note: Matrix multiplication order is not the same
+        dscores_dW2 = H.T                         # HxN
+        dL_dW2 = (dscores_dW2 @ dL_dscores)       # HxN * NxC -> HxC
+        dL_db2 = np.sum(dL_dscores, axis=0)       # 1xN * NxC -> C
+        grads['W2'] = dL_dW2 + reg * W2           # W1 cancels out, reg term halved based on description in the task
+        grads['b2'] = dL_db2
+        
+        # dL/dscores * dscores/dH * dH/dO * dO/dW1 -> Note: Matrix multiplication order is not the same
+        dscores_dH = W2.T                         # CxH
+        dH_dO = np.where(O > 0, 1, 0)             # NxH -> NxH (Note: Alternatively: (dL_dH > 0).astype(int))
+        dL_dO = dH_dO * (dL_dscores @ dscores_dH) # NxH . (NxC * CxH) -> NxH
+        dO_dW1 = X.T                              # DxN
+
+        dL_dW1 = (dO_dW1 @ dL_dO)                 # DxN * NxH -> DxH
+        dL_db1 = np.sum(dL_dO, axis=0)            # 1xN * NxH -> H
+        grads['W1'] = dL_dW1 + reg * W1           # W2 cancels out, reg term halved based on description in the task
+        grads['b1'] = dL_db1
 
         ########################################################################
         #                              END OF YOUR CODE                        #
