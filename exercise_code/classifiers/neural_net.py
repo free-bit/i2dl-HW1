@@ -291,12 +291,12 @@ def neuralnetwork_hyperparameter_tuning(X_train, y_train, X_val, y_val):
 
     results = {}
     best_val = -1
-    all_nets = []
+    # all_nets = []
 
-    learning_rates = [1e-3]
-    regularization_strengths = [1e-1, 1.5e-1]
-    hidden_sizes = [150, 180, 200]
-    num_iters = 2000
+    learning_rates = [1e-2, 1e-3, 1e-4]
+    regularization_strengths = [1e-2, 1e-1, 1e1, 1e2]
+    hidden_sizes = [50, 100, 150, 200]
+    num_iters = 100
 
     input_size = X_train.shape[1]
     num_classes = y_train.shape[0]
@@ -306,7 +306,7 @@ def neuralnetwork_hyperparameter_tuning(X_train, y_train, X_val, y_val):
         for hidden_size in hidden_sizes:
           net = TwoLayerNet(input_size, hidden_size, num_classes)
           net.train(X_train, y_train, X_val, y_val, learning_rate=lr, reg=reg,
-                    num_iters=num_iters, verbose=False)
+                    num_iters=num_iters, verbose=True)
 
           y_train_pred = net.predict(X_train)
           train_acc = np.mean(y_train == y_train_pred)
@@ -321,7 +321,7 @@ def neuralnetwork_hyperparameter_tuning(X_train, y_train, X_val, y_val):
           print('validation accuracy: %f' % val_acc)
           
           results[(lr, reg, hidden_size)] = (train_acc, val_acc)
-          all_nets.append((net, val_acc))
+          # all_nets.append((net, val_acc))
           
           if val_acc > best_val:
               best_val = val_acc

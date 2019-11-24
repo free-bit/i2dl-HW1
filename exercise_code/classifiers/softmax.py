@@ -140,8 +140,14 @@ def softmax_hyperparameter_tuning(X_train, y_train, X_val, y_val):
     best_val = -1
     best_softmax = None
     all_classifiers = []
-    learning_rates = np.arange(1.0e-6, 5.5e-6, 0.5e-6)
-    regularization_strengths = np.arange(1e3, 6.5e3, 0.5e3)
+
+    # Softmax on raw pixels below ranges were used:
+    # learning_rates = np.arange(1.0e-6, 5.5e-6, 0.5e-6)
+    # regularization_strengths = np.arange(1e3, 6.5e3, 0.5e3)
+
+    # Softmax on features below ranges were used:
+    learning_rates = np.arange(1.0e-2, 2.5e-2, 0.5e-2)
+    regularization_strengths = np.arange(1e-1, 5e-1, 1e-1)
 
     ############################################################################
     # DONE:                                                                    #
@@ -158,28 +164,27 @@ def softmax_hyperparameter_tuning(X_train, y_train, X_val, y_val):
     # the validation code with a larger value for num_iters.                   #
     ############################################################################
 
-    grid = zip(learning_rates, regularization_strengths)
+    for lr in learning_rates:
+        for reg in regularization_strengths:
+            softmax = SoftmaxClassifier()
+            softmax.train(X_train, y_train, learning_rate=lr, reg=reg,
+                            num_iters=1500, verbose=False)
+            y_train_pred = softmax.predict(X_train)
+            train_acc = np.mean(y_train == y_train_pred)
 
-    for lr, reg in grid:
-        softmax = SoftmaxClassifier()
-        softmax.train(X_train, y_train, learning_rate=lr, reg=reg,
-                        num_iters=1500, verbose=False)
-        y_train_pred = softmax.predict(X_train)
-        train_acc = np.mean(y_train == y_train_pred)
-
-        y_val_pred = softmax.predict(X_val)
-        val_acc = np.mean(y_val == y_val_pred)
-        print('lr %e' % lr)
-        print('reg %e' % reg)
-        print('training accuracy: %f' % train_acc)
-        print('validation accuracy: %f' % val_acc)
-        
-        results[(lr, reg)] = (train_acc, val_acc)
-        all_classifiers.append((softmax, val_acc))
-        
-        if val_acc > best_val:
-            best_val = val_acc
-            best_softmax = softmax
+            y_val_pred = softmax.predict(X_val)
+            val_acc = np.mean(y_val == y_val_pred)
+            print('lr %e' % lr)
+            print('reg %e' % reg)
+            print('training accuracy: %f' % train_acc)
+            print('validation accuracy: %f' % val_acc)
+            
+            results[(lr, reg)] = (train_acc, val_acc)
+            all_classifiers.append((softmax, val_acc))
+            
+            if val_acc > best_val:
+                best_val = val_acc
+                best_softmax = softmax
 
 
     ############################################################################
